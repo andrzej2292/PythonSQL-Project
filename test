@@ -18,6 +18,7 @@ Type:
 "edit" to amend the existing asset
 "reset" to reset all assets to default values
 "quit" to close the program
+"export" to export current assets to CSV file
 """
 
 
@@ -149,5 +150,7 @@ Your portfolio currently consists of:
         break
 
     else:
-        print(f"""Incorrect command. Please try again' 
-              {help}""")
+        print(f"""
+Incorrect command. Please try again. 
+{help}
+""")
