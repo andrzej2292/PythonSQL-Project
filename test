@@ -1,20 +1,23 @@
+#sql alchemy
+#rozwiazac problem co  jesli odpalamy 1 raz i jeszcze nic nie ma, wtedy current nie zadziala
+
 import mysql.connector
 from mysql.connector import Error
 
-mydb = mysql.connector.connect   (user='root', password='MyNewPass',
-                                            host='127.0.0.1',
-                                            database='my_portfolio', auth_plugin='mysql_native_password')
+mydb = mysql.connector.connect(user='root', password='MyNewPass',
+                               host='127.0.0.1',
+                               database='my_portfolio', auth_plugin='mysql_native_password')
 
 mycursor = mydb.cursor()
 command = ""
 help = """
-
 Type:
 "current" to display all your current assets
 "add" to add the new asset
 "remove" to remove the existing asset
-"edit" to edit the existing asset
+"edit" to amend the existing asset
 "reset" to reset all assets to default values
+"quit" to close the program
 """
 
 
@@ -47,31 +50,27 @@ mycursor.execute(sql_formula, asset2)
 mycursor.execute(sql_formula, asset3)
 mydb.commit()
 mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-myresult = mycursor.fetchall()
-for x in myresult:
+my_result = mycursor.fetchall()
+for x in my_result:
     print(x)
 
 print(help)
 
 
-while command != quit:
+while True:
     command = str.lower(input('> '))
     if command == "current":
         mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        myresult = mycursor.fetchall()
-        for x in myresult:
+        my_result = mycursor.fetchall()
+        for x in my_result:
             print(x)
 
     elif command == "add":
         sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
-        print("Please type security name that you would like to add")
-        name_new = input("> ")
-        print("Please choose security type that you would like to add: shares/bonds/currency/cryptocurrency")
-        type_new = input("> ")
-        print("Please type the amount of security that you would like to add")
-        amount_new = int(input("> "))
-        print("Please type the value per unit of the security that you would like to add")
-        value_per_unit_new = int(input("> "))
+        name_new = str.lower(input("Please type security name that you would like to add > "))
+        type_new = str.lower(input("Choose security type that you would like to add: shares/bonds/currency/cryptocurrency > "))
+        amount_new = int(input("Please type the amount of security that you would like to add > "))
+        value_per_unit_new = int(input("Please type the value per unit of the security that you would like to add > "))
         asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}', f'{value_per_unit_new}')
         mycursor.execute(sql_formula, asset_new)
         mydb.commit()
@@ -83,27 +82,40 @@ Your portfolio currently consists of:
 """)
 
         mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        myresult = mycursor.fetchall()
-        for x in myresult:
+        my_result = mycursor.fetchall()
+        for x in my_result:
             print(x)
         print(help)
 
     elif command == "remove":
-        print("Please type security name that you would like to remove")
-        asset_to_delete = str(input("> "))
+        asset_to_delete = str.lower(input("Please type security name that you would like to remove > "))
         sql_formula = f'DELETE FROM current_assets WHERE name = "{asset_to_delete}"'
         mycursor.execute(sql_formula)
-        mydb.commit()
 
         print("""
-        Security has been removed!
+Security has been removed!
 
-        Your portfolio currently consists of:
+Your portfolio currently consists of:
         """)
 
+        mydb.commit()
         mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        myresult = mycursor.fetchall()
-        for x in myresult:
+        my_result = mycursor.fetchall()
+        for x in my_result:
+            print(x)
+        print(help)
+
+    elif command == "edit":
+        name_edit = str.lower(input("Please type security name that you would like to amend > "))
+        add_or_subtract = str.lower(input("Would you like to add or subtract from your security? Type add/subtract > "))
+        amount_edit = int(input("Please type the amount that you would like to add or subtract > "))
+        sql_formula = f"UPDATE current_assets SET amount = (amount + {amount_edit}) WHERE name = '{name_edit}'"
+        mycursor.execute(sql_formula)
+
+        mydb.commit()
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = mycursor.fetchall()
+        for x in my_result:
             print(x)
         print(help)
 
@@ -128,13 +140,14 @@ Your portfolio currently consists of:
         mycursor.execute(sql_formula, asset3)
 
         mydb.commit()
-
         mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-
-        myresult = mycursor.fetchall()
-
-        for x in myresult:
+        my_result = mycursor.fetchall()
+        for x in my_result:
             print(x)
 
+    elif command == "quit":
+        break
+
     else:
-        print(help)
+        print(f"""Incorrect command. Please try again' 
+              {help}""")
