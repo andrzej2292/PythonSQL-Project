@@ -7,7 +7,7 @@ from mysql.connector import Error
 mydb = mysql.connector.connect(user='root', password='MyNewPass',
                                host='127.0.0.1',
                                database='my_portfolio', auth_plugin='mysql_native_password')
-
+output = ''
 mycursor = mydb.cursor()
 command = ""
 help = """
@@ -17,8 +17,8 @@ Type:
 "remove" to remove the existing asset
 "edit" to amend the existing asset
 "reset" to reset all assets to default values
-"quit" to close the program
 "export" to export current assets to CSV file
+"quit" to close the program
 """
 
 
@@ -145,6 +145,18 @@ Your portfolio currently consists of:
         my_result = mycursor.fetchall()
         for x in my_result:
             print(x)
+
+    elif command == "export":
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = mycursor.fetchall()
+        f = open('portfolio_export.csv', "a+")
+
+        for x in my_result:
+            output += f"""{str(x)}
+"""
+        print(output)
+        f.write(f'{output}')
+        f.close()
 
     elif command == "quit":
         break
