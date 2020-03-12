@@ -1,0 +1,140 @@
+import mysql.connector
+from mysql.connector import Error
+
+mydb = mysql.connector.connect   (user='root', password='MyNewPass',
+                                            host='127.0.0.1',
+                                            database='my_portfolio', auth_plugin='mysql_native_password')
+
+mycursor = mydb.cursor()
+command = ""
+help = """
+
+Type:
+"current" to display all your current assets
+"add" to add the new asset
+"remove" to remove the existing asset
+"edit" to edit the existing asset
+"reset" to reset all assets to default values
+"""
+
+
+print("""
+Welcome to your assets manager tool!
+
+Below you can see your current assets:
+
+name, type, amount, value_per_unit_pln, value_total_pln
+""")
+
+mycursor.execute("DROP TABLE IF EXISTS current_assets;")
+
+mycursor.execute("""CREATE TABLE current_assets (
+ name varchar(50),
+ type varchar(50),
+ amount int, 
+ value_per_unit_pln int ,  
+ value_total_pln int AS (amount * value_per_unit_pln)
+ )""")
+
+sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+
+asset1 = ('btc', "cryptocurrency", 2, 29700)
+asset2 = ('usd', 'currency', 10000, 3.80)
+asset3 = ('cdr', 'shares', 30, 250)
+
+mycursor.execute(sql_formula, asset1)
+mycursor.execute(sql_formula, asset2)
+mycursor.execute(sql_formula, asset3)
+mydb.commit()
+mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+myresult = mycursor.fetchall()
+for x in myresult:
+    print(x)
+
+print(help)
+
+
+while command != quit:
+    command = str.lower(input('> '))
+    if command == "current":
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+        myresult = mycursor.fetchall()
+        for x in myresult:
+            print(x)
+
+    elif command == "add":
+        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+        print("Please type security name that you would like to add")
+        name_new = input("> ")
+        print("Please choose security type that you would like to add: shares/bonds/currency/cryptocurrency")
+        type_new = input("> ")
+        print("Please type the amount of security that you would like to add")
+        amount_new = int(input("> "))
+        print("Please type the value per unit of the security that you would like to add")
+        value_per_unit_new = int(input("> "))
+        asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}', f'{value_per_unit_new}')
+        mycursor.execute(sql_formula, asset_new)
+        mydb.commit()
+
+        print("""
+New security has been added!
+        
+Your portfolio currently consists of:
+""")
+
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+        myresult = mycursor.fetchall()
+        for x in myresult:
+            print(x)
+        print(help)
+
+    elif command == "remove":
+        print("Please type security name that you would like to remove")
+        asset_to_delete = str(input("> "))
+        sql_formula = f'DELETE FROM current_assets WHERE name = "{asset_to_delete}"'
+        mycursor.execute(sql_formula)
+        mydb.commit()
+
+        print("""
+        Security has been removed!
+
+        Your portfolio currently consists of:
+        """)
+
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+        myresult = mycursor.fetchall()
+        for x in myresult:
+            print(x)
+        print(help)
+
+    elif command == "reset":
+        mycursor.execute("DROP TABLE IF EXISTS current_assets;")
+
+        mycursor.execute("""CREATE TABLE current_assets (
+        name varchar(50),
+        type varchar(50),
+        amount int, 
+        value_per_unit_pln int ,  
+        value_total_pln int AS (amount * value_per_unit_pln)
+        )""")
+
+        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+        asset1 = ('btc', "cryptocurrency", 2, 29700)
+        asset2 = ('usd', 'currency', 10000, 3.80)
+        asset3 = ('cdr', 'shares', 30, 250)
+
+        mycursor.execute(sql_formula, asset1)
+        mycursor.execute(sql_formula, asset2)
+        mycursor.execute(sql_formula, asset3)
+
+        mydb.commit()
+
+        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
+
+        myresult = mycursor.fetchall()
+
+        for x in myresult:
+            print(x)
+
+    else:
+        print(help)
