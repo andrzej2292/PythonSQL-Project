@@ -32,7 +32,7 @@ Below you can see your current assets:
 name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}
 """)
 
-# creation of below table should be executed in MySQL (remember to remove "my_cursor.execute"):
+# template for creation of the main table in MySQL:
 # my_cursor.execute("DROP TABLE IF EXISTS current_assets;")
 # my_cursor.execute("""CREATE TABLE current_assets (
 # name varchar(50),
