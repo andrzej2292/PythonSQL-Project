@@ -1,17 +1,17 @@
-#sql alchemy
-#rozwiazac problem co  jesli odpalamy 1 raz i jeszcze nic nie ma, wtedy current nie zadziala
-
+# required: tkinter, reportlab, YahooFinancials, mysql.connector
+# upgrade pip
+from datetime import date
+from yahoofinancials import YahooFinancials
 import mysql.connector
-from mysql.connector import Error
 
 mydb = mysql.connector.connect(user='root', password='MyNewPass',
                                host='127.0.0.1',
                                database='my_portfolio', auth_plugin='mysql_native_password')
 output = ''
-mycursor = mydb.cursor()
+my_cursor = mydb.cursor()
 command = ""
 help = """
-Type:
+Enter:
 "current" to display all your current assets
 "add" to add the new asset
 "remove" to remove the existing asset
@@ -21,77 +21,144 @@ Type:
 "quit" to close the program
 """
 
+currency_local = str.upper(input('Please enter your local currency code: '))
+today = date.today()
 
-print("""
+print(f"""
 Welcome to your assets manager tool!
 
 Below you can see your current assets:
 
-name, type, amount, value_per_unit_pln, value_total_pln
+name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}
 """)
 
-mycursor.execute("DROP TABLE IF EXISTS current_assets;")
+# creation of below table should be executed in MySQL (remember to remove "my_cursor.execute"):
+# my_cursor.execute("DROP TABLE IF EXISTS current_assets;")
+# my_cursor.execute("""CREATE TABLE current_assets (
+# name varchar(50),
+# type varchar(50),
+# amount int,
+# value_per_unit_pln float,
+# value_total_pln float
+# )""")
 
-mycursor.execute("""CREATE TABLE current_assets (
- name varchar(50),
- type varchar(50),
- amount int, 
- value_per_unit_pln int ,  
- value_total_pln int AS (amount * value_per_unit_pln)
- )""")
 
-sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+currencies_usdxxx = [f'USD{currency_local}=X']
+yahoo_financials_currencies = YahooFinancials(currencies_usdxxx)
+daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}", "daily")
+currency_rate_usdxxx = daily_currency_prices[f'USD{currency_local}=X']["prices"][0]["open"]
 
-asset1 = ('btc', "cryptocurrency", 2, 29700)
-asset2 = ('usd', 'currency', 10000, 3.80)
-asset3 = ('cdr', 'shares', 30, 250)
 
-mycursor.execute(sql_formula, asset1)
-mycursor.execute(sql_formula, asset2)
-mycursor.execute(sql_formula, asset3)
+class Assets:
+
+    def __init__(self, name, type, amount):
+        self.name = name
+        self.type = type
+        self.amount = amount
+
+    def value_per_unit(self):
+        today = date.today()
+        if self.type == 'currency':
+            currencies = [f'{str.upper(self.name)}{str.upper(currency_local)}=X']
+            yahoo_financials_currencies = YahooFinancials(currencies)
+            daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}", "daily")
+            currency_price = daily_currency_prices[f'{str.upper(self.name)}{str.upper(currency_local)}=X']["prices"][0]["open"]
+            return float(currency_price)
+
+        elif self.type == 'cryptocurrency':
+            cryptocurrencies = [f'{str.upper(self.name)}-USD']
+            yahoo_financials_cryptocurrencies = YahooFinancials(cryptocurrencies)
+            daily_crypto_prices = yahoo_financials_cryptocurrencies.get_historical_price_data(f"{today}", f"{today}", "daily")
+            cryptocurrency_price_usd = daily_crypto_prices[f'{str.upper(self.name)}-USD']["prices"][0]["open"]
+            cryptocurrency_price_local = currency_rate_usdxxx * cryptocurrency_price_usd
+            return float(cryptocurrency_price_local)
+
+    def value_total(self):
+        return float(self.amount * self.value_per_unit())
+
+
+asset1 = Assets('gbp', "currency", 1000)
+asset2 = Assets('usd', 'currency', 1000)
+asset3 = Assets('eth', 'cryptocurrency', 1)
+
+
+asset1_basic = (asset1.name, asset1.type, asset1.amount, asset1.value_per_unit(), asset1.value_total())
+asset2_basic = (asset2.name, asset2.type, asset2.amount, asset2.value_per_unit(), asset2.value_total())
+asset3_basic = (asset3.name, asset3.type, asset3.amount, asset3.value_per_unit(), asset3.value_total())
+
+
+sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit, value_total) VALUES (%s, %s, %s, %s, %s)"
+my_cursor.execute(sql_formula, asset1_basic)
+my_cursor.execute(sql_formula, asset2_basic)
+my_cursor.execute(sql_formula, asset3_basic)
+
+
+"""
+sql_formula_price = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+
+asset1_price = ('btc', "cryptocurrency", 2, 1)
+asset2_price = ('usd', 'currency', 10000, price)
+asset3_price = ('cdr', 'shares', 30, 1)
+
+my_cursor.execute(sql_formula_price, asset1_price)
+my_cursor.execute(sql_formula_price, asset2_price)
+my_cursor.execute(sql_formula_price, asset3_price)
+"""
 mydb.commit()
-mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-my_result = mycursor.fetchall()
+
+
+my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+my_result = my_cursor.fetchall()
 for x in my_result:
     print(x)
 
 print(help)
-
+# get USD to PLN
+"""
+my_cursor.execute("SELECT amount FROM my_portfolio.current_assets WHERE name='usd'")
+my_result = my_cursor.fetchall()
+for x in my_result:
+    print(x[0] * price)
+"""
 
 while True:
     command = str.lower(input('> '))
     if command == "current":
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
 
     elif command == "add":
         sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
         name_new = str.lower(input("Please type security name that you would like to add > "))
+        mydb.converter.escape(name_new)
         type_new = str.lower(input("Choose security type that you would like to add: shares/bonds/currency/cryptocurrency > "))
+        mydb.converter.escape(type_new)
         amount_new = int(input("Please type the amount of security that you would like to add > "))
+        mydb.converter.escape(amount_new)
         value_per_unit_new = int(input("Please type the value per unit of the security that you would like to add > "))
         asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}', f'{value_per_unit_new}')
-        mycursor.execute(sql_formula, asset_new)
+        my_cursor.execute(sql_formula, asset_new)
         mydb.commit()
 
         print("""
 New security has been added!
-        
+
 Your portfolio currently consists of:
 """)
 
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
         print(help)
 
     elif command == "remove":
         asset_to_delete = str.lower(input("Please type security name that you would like to remove > "))
+        mydb.converter.escape(asset_to_delete)
         sql_formula = f'DELETE FROM current_assets WHERE name = "{asset_to_delete}"'
-        mycursor.execute(sql_formula)
+        my_cursor.execute(sql_formula)
 
         print("""
 Security has been removed!
@@ -100,30 +167,32 @@ Your portfolio currently consists of:
         """)
 
         mydb.commit()
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
         print(help)
 
     elif command == "edit":
         name_edit = str.lower(input("Please type security name that you would like to amend > "))
+        mydb.converter.escape(name_edit)
         add_or_subtract = str.lower(input("Would you like to add or subtract from your security? Type add/subtract > "))
         amount_edit = int(input("Please type the amount that you would like to add or subtract > "))
+        mydb.converter.escape(amount_edit)
         sql_formula = f"UPDATE current_assets SET amount = (amount + {amount_edit}) WHERE name = '{name_edit}'"
-        mycursor.execute(sql_formula)
+        my_cursor.execute(sql_formula)
 
         mydb.commit()
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
         print(help)
 
     elif command == "reset":
-        mycursor.execute("DROP TABLE IF EXISTS current_assets;")
+        my_cursor.execute("DROP TABLE IF EXISTS current_assets;")
 
-        mycursor.execute("""CREATE TABLE current_assets (
+        my_cursor.execute("""CREATE TABLE current_assets (
         name varchar(50),
         type varchar(50),
         amount int, 
@@ -136,24 +205,23 @@ Your portfolio currently consists of:
         asset2 = ('usd', 'currency', 10000, 3.80)
         asset3 = ('cdr', 'shares', 30, 250)
 
-        mycursor.execute(sql_formula, asset1)
-        mycursor.execute(sql_formula, asset2)
-        mycursor.execute(sql_formula, asset3)
+        my_cursor.execute(sql_formula, asset1)
+        my_cursor.execute(sql_formula, asset2)
+        my_cursor.execute(sql_formula, asset3)
 
         mydb.commit()
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
 
     elif command == "export":
-        mycursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = mycursor.fetchall()
+        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
         f = open('portfolio_export.csv', "a+")
 
         for x in my_result:
-            output += f"""{str(x)}
-"""
+            output += f"""{str(x)}"""
         print(output)
         f.write(f'{output}')
         f.close()
