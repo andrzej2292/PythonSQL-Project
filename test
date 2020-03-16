@@ -32,7 +32,8 @@ Below you can see your current assets:
 name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}
 """)
 
-# template for creation of the main table in MySQL:
+
+# creation of below table should be executed in MySQL (remember to remove "my_cursor.execute"):
 # my_cursor.execute("DROP TABLE IF EXISTS current_assets;")
 # my_cursor.execute("""CREATE TABLE current_assets (
 # name varchar(50),
@@ -126,26 +127,28 @@ while True:
     if command == "current":
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
         my_result = my_cursor.fetchall()
+        f"""name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}"""
         for x in my_result:
             print(x)
 
+#złota  myśl na koniec dnia - potraktowac name jako  uniqe id i na tej  podstwawie  tworzyc nowe  assets, np asset_usd, asset_btc etc
     elif command == "add":
-        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
+        sql_formula = "INSERT INTO current_assets (name, type, amount) VALUES (%s, %s, %s)"
         name_new = str.lower(input("Please type security name that you would like to add > "))
         mydb.converter.escape(name_new)
         type_new = str.lower(input("Choose security type that you would like to add: shares/bonds/currency/cryptocurrency > "))
         mydb.converter.escape(type_new)
         amount_new = int(input("Please type the amount of security that you would like to add > "))
-        mydb.converter.escape(amount_new)
-        value_per_unit_new = int(input("Please type the value per unit of the security that you would like to add > "))
-        asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}', f'{value_per_unit_new}')
+        asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}')
         my_cursor.execute(sql_formula, asset_new)
         mydb.commit()
 
-        print("""
+        print(f"""
 New security has been added!
 
 Your portfolio currently consists of:
+
+name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}
 """)
 
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
