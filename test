@@ -55,7 +55,7 @@ class Assets:
     def __init__(self, name, type, amount):
         self.name = name
         self.type = type
-        self.amount = amount
+        self.amount = int(amount)
 
     def value_per_unit(self):
         today = date.today()
@@ -78,21 +78,21 @@ class Assets:
         return float(self.amount * self.value_per_unit())
 
 
-asset1 = Assets('gbp', "currency", 1000)
-asset2 = Assets('usd', 'currency', 1000)
-asset3 = Assets('eth', 'cryptocurrency', 1)
+asset_gbp = Assets('gbp', "currency", 1000)
+asset_usd = Assets('usd', 'currency', 1000)
+asset_eth = Assets('eth', 'cryptocurrency', 1)
 
 
-asset1_basic = (asset1.name, asset1.type, asset1.amount, asset1.value_per_unit(), asset1.value_total())
-asset2_basic = (asset2.name, asset2.type, asset2.amount, asset2.value_per_unit(), asset2.value_total())
-asset3_basic = (asset3.name, asset3.type, asset3.amount, asset3.value_per_unit(), asset3.value_total())
+asset_gbp_basic = (asset_gbp.name, asset_gbp.type, asset_gbp.amount, asset_gbp.value_per_unit(), asset_gbp.value_total())
+asset_usd_basic = (asset_usd.name, asset_usd.type, asset_usd.amount, asset_usd.value_per_unit(), asset_usd.value_total())
+asset_eth_basic = (asset_eth.name, asset_eth.type, asset_eth.amount, asset_eth.value_per_unit(), asset_eth.value_total())
 
-
+"""
 sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit, value_total) VALUES (%s, %s, %s, %s, %s)"
-my_cursor.execute(sql_formula, asset1_basic)
-my_cursor.execute(sql_formula, asset2_basic)
-my_cursor.execute(sql_formula, asset3_basic)
-
+my_cursor.execute(sql_formula, asset_gbp_basic)
+my_cursor.execute(sql_formula, asset_usd_basic)
+my_cursor.execute(sql_formula, asset_eth_basic)
+"""
 
 """
 sql_formula_price = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
@@ -127,20 +127,22 @@ while True:
     if command == "current":
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
         my_result = my_cursor.fetchall()
-        f"""name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}"""
+        print(f"""name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}""")
         for x in my_result:
             print(x)
 
 #złota  myśl na koniec dnia - potraktowac name jako  uniqe id i na tej  podstwawie  tworzyc nowe  assets, np asset_usd, asset_btc etc
     elif command == "add":
-        sql_formula = "INSERT INTO current_assets (name, type, amount) VALUES (%s, %s, %s)"
         name_new = str.lower(input("Please type security name that you would like to add > "))
         mydb.converter.escape(name_new)
         type_new = str.lower(input("Choose security type that you would like to add: shares/bonds/currency/cryptocurrency > "))
         mydb.converter.escape(type_new)
         amount_new = int(input("Please type the amount of security that you would like to add > "))
-        asset_new = (f'{name_new}', f'{type_new}', f'{amount_new}')
-        my_cursor.execute(sql_formula, asset_new)
+        mydb.converter.escape(amount_new)
+        asset_btc = Assets(f'{name_new}', f'{type_new}', f'{amount_new}')
+        asset_btc_basic = (asset_btc.name, asset_btc.type, asset_btc.amount, asset_btc.value_per_unit(), asset_btc.value_total())
+        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit, value_total) VALUES (%s, %s, %s, %s, %s)"
+        my_cursor.execute(sql_formula, asset_btc_basic)
         mydb.commit()
 
         print(f"""
@@ -193,26 +195,19 @@ Your portfolio currently consists of:
         print(help)
 
     elif command == "reset":
-        my_cursor.execute("DROP TABLE IF EXISTS current_assets;")
+        my_cursor.execute("TRUNCATE TABLE current_assets;")
 
-        my_cursor.execute("""CREATE TABLE current_assets (
-        name varchar(50),
-        type varchar(50),
-        amount int, 
-        value_per_unit_pln int ,  
-        value_total_pln int AS (amount * value_per_unit_pln)
-        )""")
-
-        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_pln) VALUES (%s, %s, %s, %s)"
-        asset1 = ('btc', "cryptocurrency", 2, 29700)
-        asset2 = ('usd', 'currency', 10000, 3.80)
-        asset3 = ('cdr', 'shares', 30, 250)
-
-        my_cursor.execute(sql_formula, asset1)
-        my_cursor.execute(sql_formula, asset2)
-        my_cursor.execute(sql_formula, asset3)
-
+        sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit, value_total) VALUES (%s, %s, %s, %s, %s)"
+        my_cursor.execute(sql_formula, asset_gbp_basic)
+        my_cursor.execute(sql_formula, asset_usd_basic)
+        my_cursor.execute(sql_formula, asset_eth_basic)
         mydb.commit()
+
+        print("""
+Your portfolio has been has been reset!
+
+Your portfolio currently consists of:
+        """)
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
         my_result = my_cursor.fetchall()
         for x in my_result:
@@ -228,6 +223,7 @@ Your portfolio currently consists of:
         print(output)
         f.write(f'{output}')
         f.close()
+        print("Your portfolio has been has been exported!")
 
     elif command == "quit":
         break
