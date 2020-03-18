@@ -33,11 +33,13 @@ Enter:
 "edit" to amend the existing asset
 "reset" to reset all assets to default values
 "export" to export current assets to CSV file
+"history" to display the history of all operations
 "quit" to close the program
 """
 
 today = date.today()
-currency_local = str.upper(input('Please enter your local currency code: '))
+#currency_local = str.upper(input('Please enter your local currency code: '))
+currency_local = 'PLN' #tymczasowe  wykomentowanie dla ułatwienia pracy
 currencies_usdxxx = [f'USD{currency_local}=X']
 yahoo_financials_currencies = YahooFinancials(currencies_usdxxx)
 daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}", "daily")
@@ -84,6 +86,17 @@ asset1 = (asset1_input.name, asset1_input.type, asset1_input.amount, asset1_inpu
 asset2 = (asset2_input.name, asset2_input.type, asset2_input.amount, asset2_input.value_per_unit_local_curr(), asset2_input.value_total_local_curr())
 asset3 = (asset3_input.name, asset3_input.type, asset3_input.amount, asset3_input.value_per_unit_local_curr(), asset3_input.value_total_local_curr())
 
+
+op1 = ('2020-03-02', 'gbp', 500)
+op2 = ('2020-03-03', 'gbp', -300)
+op3 = ('2020-03-10', 'usd', 200)
+op4 = ('2020-03-12', 'usd', 800)
+op5 = ('2020-03-12', 'eth', 1)
+op6 = ('2020-03-17', 'gbp', 300)
+op7 = ('2020-03-18', 'gbp', 500)
+
+
+
 print(f"""
 Welcome to your assets manager tool!
 
@@ -98,7 +111,6 @@ for x in my_result:
     print(x)
 
 print(help)
-
 
 
 
@@ -192,11 +204,21 @@ Your portfolio currently consists of:
 
     elif command == "reset":
         my_cursor.execute("TRUNCATE TABLE current_assets;")
-
         sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_local_curr, value_total_local_curr) VALUES (%s, %s, %s, %s, %s)"
         my_cursor.execute(sql_formula, asset1)
         my_cursor.execute(sql_formula, asset2)
         my_cursor.execute(sql_formula, asset3)
+
+        my_cursor.execute("TRUNCATE TABLE operations_history;")
+        sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+        my_cursor.execute(sql_formula, op1)
+        my_cursor.execute(sql_formula, op2)
+        my_cursor.execute(sql_formula, op3)
+        my_cursor.execute(sql_formula, op4)
+        my_cursor.execute(sql_formula, op5)
+        my_cursor.execute(sql_formula, op6)
+        my_cursor.execute(sql_formula, op7)
+
         mydb.commit()
 
         print("""
@@ -205,6 +227,11 @@ Your portfolio has been has been reset!
 Your portfolio currently consists of:
         """)
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_result = my_cursor.fetchall()
+        for x in my_result:
+            print(x)
+
+        my_cursor.execute("SELECT * FROM my_portfolio.operations_history")
         my_result = my_cursor.fetchall()
         for x in my_result:
             print(x)
@@ -220,6 +247,27 @@ Your portfolio currently consists of:
         f.write(f'{output}')
         f.close()
         print("Your portfolio has been has been exported!")
+
+    elif command == "history":
+        historical_date = input('Enter a historical date in format YYYY/MM/DD > ')
+
+        my_cursor.execute(f"SELECT name_op AS name, SUM(amount_op) AS amount_on_historical_date FROM my_portfolio.operations_history WHERE date_op <= '{historical_date}' GROUP BY name")
+        my_result = my_cursor.fetchall()
+        print("""
+name, amount_on_historical_date
+        """)
+        for x in my_result:
+            print(', '.join(map(str, x)))
+
+        my_cursor.execute(f"SELECT * FROM my_portfolio.operations_history WHERE date_op <= '{historical_date}'")
+        my_result = my_cursor.fetchall()
+        print("""
+Operations history:
+
+date_op, name_op, amount_op
+        """)
+        for x in my_result:
+            print(x[0], x[1], x[2])
 
     elif command == "quit":
         break
