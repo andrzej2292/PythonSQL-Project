@@ -1,7 +1,7 @@
-# required: tkinter, reportlab, YahooFinancials, mysql.connector
+# required: tkinter, reportlab, YahooFinancials, mysql.connector, re, datetime
 # upgrade pip
 
-# creation of 2 below tables should be executed in MySQL:
+# 2 below tables should be executed in MySQL:
 # CREATE TABLE current_assets (
 # name varchar(50),
 # type varchar(50),
@@ -15,9 +15,11 @@
 # name_op varchar(50),
 # amount_op int);
 
+from datetime import datetime
 from datetime import date
 from yahoofinancials import YahooFinancials
 import mysql.connector
+import re
 
 mydb = mysql.connector.connect(user='root', password='MyNewPass',
                                host='127.0.0.1',
@@ -38,7 +40,7 @@ Enter:
 """
 
 today = date.today()
-#currency_local = str.upper(input('Please enter your local currency code: '))
+# currency_local = mydb.converter.escape(str.upper(input('Please enter your local currency code: ')))
 currency_local = 'PLN' #tymczasowe  wykomentowanie dla ułatwienia pracy
 currencies_usdxxx = [f'USD{currency_local}=X']
 yahoo_financials_currencies = YahooFinancials(currencies_usdxxx)
@@ -113,7 +115,6 @@ for x in my_result:
 print(help)
 
 
-
 while True:
     command = str.lower(input('> '))
     if command == "current":
@@ -124,15 +125,34 @@ while True:
             print(x)
 
     elif command == "add":
-        name_new = str.lower(input("Please type a code of the security that you would like to add. For example: USD/BTC/AAPL > "))
-        mydb.converter.escape(name_new)
+        while True:
+            name_new = mydb.converter.escape(str.lower(input("Please type a code of the security that you would like to add. For example: USD/BTC/AAPL > ")))
+            if not name_new.isalpha():
+                print("Error! Only letters a-z allowed")
+            elif len(name_new) > 4:
+                print("Error! Max 4 characters allowed")
+            else:
+                break
         my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{name_new}'")
         msg = my_cursor.fetchone()
         if not msg:
-            type_new = str.lower(input("Choose a type of the security that you would like to add to your portfolio: shares/bonds/currency/cryptocurrency > "))
-            mydb.converter.escape(type_new)
-            amount_new = int(input("Type the amount of the security that you would like to add to your portfolio > "))
-            mydb.converter.escape(amount_new)
+            while True:
+                type_new = mydb.converter.escape(str.lower(input("Choose a type of the security that you would like to add to your portfolio: shares/bonds/currency/cryptocurrency > ")))
+                if type_new in ('shares', 'bonds', 'currency', 'cryptocurrency'):
+                    break
+                else:
+                    print("Error! Only those 4 types are allowed: shares/bonds/currency/cryptocurrency")
+            while True:
+                amount_new = 0
+                try:
+                    amount_new = mydb.converter.escape(int(input("Type the amount of the security that you would like to add to your portfolio > ")))
+                except ValueError:
+                    print("Error! Only numbers allowed")
+                    continue
+                if amount_new > 10**15:
+                    print("Error! Max 15 digits numbers allowed")
+                else:
+                    break
             asset_new_input = Assets(f'{name_new}', f'{type_new}', f'{amount_new}')
             asset_new = (asset_new_input.name, asset_new_input.type, asset_new_input.amount, asset_new_input.value_per_unit_local_curr(), asset_new_input.value_total_local_curr())
             sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_local_curr, value_total_local_curr) VALUES (%s, %s, %s, %s, %s)"
@@ -142,7 +162,7 @@ while True:
             my_cursor.execute(sql_formula, operation_new)
             mydb.commit()
             print(f"""
-Security {str.upper(name_new)} has been added to  your portfolio!
+Security {str.upper(name_new)} has been added to your portfolio!
     
 Your portfolio currently consists of:
 
@@ -158,8 +178,7 @@ name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str
             print(f"Security {str.upper(name_new)} is already included in your portfolio. Use 'edit' command to modify it.")
 
     elif command == "remove":
-        asset_to_delete = str.lower(input("Please type security name that you would like to remove > "))
-        mydb.converter.escape(asset_to_delete)
+        asset_to_delete = mydb.converter.escape(str.lower(input("Please type security name that you would like to remove > ")))
         my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{asset_to_delete}'")
         msg = my_cursor.fetchone()
         if not msg:
@@ -187,20 +206,51 @@ Your portfolio currently consists of:
             print(help)
 
     elif command == "edit":
-        name_edit = str.lower(input("Please type security name that you would like to amend > "))
-        mydb.converter.escape(name_edit)
-        add_or_subtract = str.lower(input("Would you like to add or subtract from your security? Type add/subtract > "))
-        amount_edit = int(input("Please type the amount that you would like to add or subtract > "))
-        mydb.converter.escape(amount_edit)
-        sql_formula = f"UPDATE current_assets SET amount = (amount + {amount_edit}) WHERE name = '{name_edit}'"
-        my_cursor.execute(sql_formula)
+        while True:
+            name_edit = mydb.converter.escape(str.lower(input("Please type security name that you would like to amend > ")))
+            if not name_edit.isalpha():
+                print("Error! Only letters a-z allowed")
+            elif len(name_edit) > 4:
+                print("Error! Max 4 characters allowed")
+            else:
+                break
+        my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{name_edit}'")
+        msg = my_cursor.fetchone()
+        if not msg:
+            print(f"Security {str.upper(name_edit)} is not a part of your portfolio.")
+        else:
+            while True:
+                add_or_subtract = str.lower(input("Would you like to add or subtract from your security? Type add/subtract > "))
+                if add_or_subtract in ('add', 'subtract'):
+                    break
+                else:
+                    print("Error! Only those 2 operation types are allowed: add/subtract")
+            while True:
+                amount_edit = 0
+                try:
+                    amount_edit = mydb.converter.escape(abs(int(input("Please enter the amount > "))))
+                except ValueError:
+                    print("Error! Only numbers allowed")
+                    continue
+                if amount_edit > 10**15:
+                    print("Error! Max 15 digits numbers allowed")
+                else:
+                    break
+            if add_or_subtract == 'subtract':
+                amount_edit = amount_edit * (-1)
+            sql_formula = f"UPDATE current_assets SET amount = (amount + {amount_edit}) WHERE name = '{name_edit}'"
+            my_cursor.execute(sql_formula)
 
-        mydb.commit()
-        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
-        my_result = my_cursor.fetchall()
-        for x in my_result:
-            print(x)
-        print(help)
+            operation_new = (f'{today}', f'{name_edit}', f'{amount_edit}')
+            sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+            my_cursor.execute(sql_formula, operation_new)
+            mydb.commit()
+
+            my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+            my_result = my_cursor.fetchall()
+            for x in my_result:
+                print(x)
+            print(help)
 
     elif command == "reset":
         my_cursor.execute("TRUNCATE TABLE current_assets;")
@@ -208,7 +258,6 @@ Your portfolio currently consists of:
         my_cursor.execute(sql_formula, asset1)
         my_cursor.execute(sql_formula, asset2)
         my_cursor.execute(sql_formula, asset3)
-
         my_cursor.execute("TRUNCATE TABLE operations_history;")
         sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
         my_cursor.execute(sql_formula, op1)
@@ -218,7 +267,6 @@ Your portfolio currently consists of:
         my_cursor.execute(sql_formula, op5)
         my_cursor.execute(sql_formula, op6)
         my_cursor.execute(sql_formula, op7)
-
         mydb.commit()
 
         print("""
@@ -240,7 +288,6 @@ Your portfolio currently consists of:
         my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
         my_result = my_cursor.fetchall()
         f = open('portfolio_export.csv', "a+")
-
         for x in my_result:
             output += f"""{str(x)}"""
         print(output)
@@ -249,8 +296,14 @@ Your portfolio currently consists of:
         print("Your portfolio has been has been exported!")
 
     elif command == "history":
-        historical_date = input('Enter a historical date in format YYYY/MM/DD > ')
-
+        while True:
+            historical_date = mydb.converter.escape(input('Enter a historical date in format YYYY/MM/DD > '))
+            try:
+                datetime.strptime(historical_date, '%Y/%m/%d')
+            except ValueError:
+                print('The date {} is invalid'.format(historical_date))
+            else:
+                break
         my_cursor.execute(f"SELECT name_op AS name, SUM(amount_op) AS amount_on_historical_date FROM my_portfolio.operations_history WHERE date_op <= '{historical_date}' GROUP BY name")
         my_result = my_cursor.fetchall()
         print("""
@@ -270,6 +323,9 @@ date_op, name_op, amount_op
             print(x[0], x[1], x[2])
 
     elif command == "quit":
+        print("""
+Thank you for using My Portfolio application. See you soon!
+        """)
         break
 
     else:
