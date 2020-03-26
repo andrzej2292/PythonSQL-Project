@@ -30,7 +30,21 @@ mydb = mysql.connector.connect(user='root', password='MyNewPass',
 
 
 
+root = Tk()
+root.title("Welcome to LikeGeeks app")
+root.geometry('1000x800')
+lbl = Label(root, text="Choose your local currency:")
+lbl.grid(row=0, column=0)
+# e = Entry(root, width=15, borderwidth=5)
+# e.grid(row=1, column=0, padx=10, pady=10)
+# e.insert(0, "Choose your local currency")
+# txt = Entry(window, width=10)
+# txt.grid(column=1, row(column=0, row=0)=0)
 
+
+
+
+today = date.today()
 output = ''
 my_cursor = mydb.cursor(buffered=True)
 command = ""
@@ -46,13 +60,7 @@ Enter:
 "quit" to close the program
 """
 
-today = date.today()
-# currency_local = mydb.converter.escape(str.upper(input('Please enter your local currency code: ')))
-currency_local = 'PLN'  # tymczasowe  wykomentowanie dla ułatwienia pracy
-currencies_usdxxx = [f'USD{currency_local}=X']
-yahoo_financials_currencies = YahooFinancials(currencies_usdxxx)
-daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}", "daily")
-currency_rate_usdxxx = daily_currency_prices[f'USD{currency_local}=X']["prices"][0]["open"]
+
 
 
 class Assets:
@@ -63,25 +71,23 @@ class Assets:
         self.amount = int(amount)
 
     def value_per_unit_local_curr(self):
-        today = date.today()
+        # today = date.today()
+
         if self.type == 'currency':
-            currencies = [f'{str.upper(self.name)}{str.upper(currency_local)}=X']
-            if str.upper(self.name) == str.upper(currency_local):
+            currencies = [f'{str.upper(self.name)}{str.upper(currency_local.get())}=X']
+            if str.upper(self.name) == str.upper(currency_local.get()):
                 currency_rate = 1
                 return float(currency_rate)
             else:
                 yahoo_financials_currencies = YahooFinancials(currencies)
-                daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}",
-                                                                                              "daily")
-                currency_rate = \
-                daily_currency_prices[f'{str.upper(self.name)}{str.upper(currency_local)}=X']["prices"][0]["open"]
+                daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}","daily")
+                currency_rate = daily_currency_prices[f'{str.upper(self.name)}{str.upper(currency_local.get())}=X']["prices"][0]["open"]
                 return float(currency_rate)
 
         elif self.type == 'cryptocurrency':
             cryptocurrencies = [f'{str.upper(self.name)}-USD']
             yahoo_financials_cryptocurrencies = YahooFinancials(cryptocurrencies)
-            daily_crypto_prices = yahoo_financials_cryptocurrencies.get_historical_price_data(f"{today}", f"{today}",
-                                                                                              "daily")
+            daily_crypto_prices = yahoo_financials_cryptocurrencies.get_historical_price_data(f"{today}", f"{today}","daily")
             cryptocurrency_price_usd = daily_crypto_prices[f'{str.upper(self.name)}-USD']["prices"][0]["open"]
             cryptocurrency_price_local = currency_rate_usdxxx * cryptocurrency_price_usd
             return float(cryptocurrency_price_local)
@@ -89,17 +95,11 @@ class Assets:
     def value_total_local_curr(self):
         return float(self.amount * self.value_per_unit_local_curr())
 
-
+"""
 asset1_input = Assets('gbp', "currency", 1000)
 asset2_input = Assets('usd', 'currency', 1000)
 asset3_input = Assets('eth', 'cryptocurrency', 1)
 
-asset1 = (asset1_input.name, asset1_input.type, asset1_input.amount, asset1_input.value_per_unit_local_curr(),
-          asset1_input.value_total_local_curr())
-asset2 = (asset2_input.name, asset2_input.type, asset2_input.amount, asset2_input.value_per_unit_local_curr(),
-          asset2_input.value_total_local_curr())
-asset3 = (asset3_input.name, asset3_input.type, asset3_input.amount, asset3_input.value_per_unit_local_curr(),
-          asset3_input.value_total_local_curr())
 
 op1 = ('2020-03-02', 'gbp', 500)
 op2 = ('2020-03-03', 'gbp', -300)
@@ -109,37 +109,33 @@ op5 = ('2020-03-12', 'eth', 1)
 op6 = ('2020-03-17', 'gbp', 300)
 op7 = ('2020-03-18', 'gbp', 500)
 
-print(f"""
-Welcome to your assets manager tool!
 
-Below you can see your current assets:
+asset1 = (asset1_input.name, asset1_input.type, asset1_input.amount, asset1_input.value_per_unit_local_curr(),
+          asset1_input.value_total_local_curr())
+asset2 = (asset2_input.name, asset2_input.type, asset2_input.amount, asset2_input.value_per_unit_local_curr(),
+          asset2_input.value_total_local_curr())
+asset3 = (asset3_input.name, asset3_input.type, asset3_input.amount, asset3_input.value_per_unit_local_curr(),
+          asset3_input.value_total_local_curr())
+"""
 
-name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}
-""")
 
-my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
-my_result = my_cursor.fetchall()
-for x in my_result:
-    print(x)
-
-#print(help)
-
-root = Tk()
-root.title("Welcome to LikeGeeks app")
-root.geometry('1000x800')
-lbl = Label(root, text="Hello")
-lbl.grid(row=0, column=1)
-e1 = Entry(root, width=35, borderwidth=5)
-e1.grid(row=0, column=0, padx=10, pady=10)
-#txt = Entry(window, width=10)
-#txt.grid(column=1, row(column=0, row=0)=0)
+def currency_rate_usdloc():
+    global currency_local
+    # currency_local = 'PLN'  # tymczasowe wykomentowanie dla ułatwienia pracy
+    currencies_usdxxx = [f'USD{currency_local}=X']
+    yahoo_financials_currencies = YahooFinancials(currencies_usdxxx)
+    daily_currency_prices = yahoo_financials_currencies.get_historical_price_data(f"{today}", f"{today}", "daily")
+    global currency_rate_usdxxx
+    currency_rate_usdxxx = daily_currency_prices[f'USD{currency_local}=X']["prices"][0]["open"]
 
 
 def current_execute():
     output = ''
     my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
     my_result = my_cursor.fetchall()
-    legend = (f"""name, type, amount, value_per_unit_{str.lower(currency_local)}, value_total_{str.lower(currency_local)}""")
+    legend = f"""Below you can see your current assets:
+
+name, type, amount, value_per_unit_{str.lower(currency_local.get())}, value_total_{str.lower(currency_local.get())}"""
     for x in my_result:
         output += f"""{x}
 """
@@ -157,7 +153,7 @@ def new_win_add():
     e_name = Entry(new_win, width=15, borderwidth=5)
     e_name.grid(row=1, column=0, padx=10, pady=10)
 
-    display_type = Label(new_win, text="Type a code of the security that you would like to add. For example: USD/BTC/AAPL")
+    display_type = Label(new_win, text="Type a code of the security that you would like to add. For example: USD/BTC/AAPL") #???
     display_type.grid(row=3, column=0)
     global sec_type
     sec_type = StringVar(new_win)
@@ -218,15 +214,22 @@ def new_win_add_check():
     my_cursor.execute(sql_formula, operation_new)
     mydb.commit()
 
+
+currency_local = StringVar(root)
+currency_local.set("USD")
+var = OptionMenu(root, currency_local, "EUR", "GBP", "JPY", "PLN")
+var.grid(row=1, column=0)
+
 btn1 = Button(root, text="Current Assets", command=current_execute)
 btn2 = Button(root, text="Add Asset", command=new_win_add)
 
-btn1.grid(column=0, row=1)
-btn2.grid(column=0, row=3)
-
+btn1.grid(column=0, row=3)
+btn2.grid(column=0, row=4)
 
 root.mainloop()
 
+# 26.03 notka do samego siebie,  trzeba ostro przemodelowac kod, wywalic z bazy danych 2 kolumny z prawej i zamiast tego zrobic tak, zeby liczyc je
+# juz w samym programie, czyli poprostu w 2ga strone przeprowadzic operacje. w ten sposob pozbedziemy sie takze tych "roboczych" asset 1-3 ale to juz  jutro bo dzisiaj padam z nog
 
 # command = str.lower(input('> '))
 if command == "current":
@@ -373,38 +376,6 @@ elif command == "edit":
             print(x)
         print(list_of_commands)
 
-elif command == "reset":
-    my_cursor.execute("TRUNCATE TABLE current_assets;")
-    sql_formula = "INSERT INTO current_assets (name, type, amount, value_per_unit_local_curr, value_total_local_curr) VALUES (%s, %s, %s, %s, %s)"
-    my_cursor.execute(sql_formula, asset1)
-    my_cursor.execute(sql_formula, asset2)
-    my_cursor.execute(sql_formula, asset3)
-    my_cursor.execute("TRUNCATE TABLE operations_history;")
-    sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
-    my_cursor.execute(sql_formula, op1)
-    my_cursor.execute(sql_formula, op2)
-    my_cursor.execute(sql_formula, op3)
-    my_cursor.execute(sql_formula, op4)
-    my_cursor.execute(sql_formula, op5)
-    my_cursor.execute(sql_formula, op6)
-    my_cursor.execute(sql_formula, op7)
-    mydb.commit()
-
-    print("""
-Your portfolio has been has been reset!
-
-Your portfolio currently consists of:
-    """)
-    my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
-    my_result = my_cursor.fetchall()
-    for x in my_result:
-        print(x)
-
-    my_cursor.execute("SELECT * FROM my_portfolio.operations_history")
-    my_result = my_cursor.fetchall()
-    for x in my_result:
-        print(x)
-
 elif command == "export":
     my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
     my_result = my_cursor.fetchall()
@@ -452,8 +423,6 @@ Thank you for using My Portfolio application. See you soon!
 else:
     pass
 #    print(f"""
-#Incorrect command. Please try again.
-#{List_of_commands}
+# Incorrect command. Please try again.
+# {List_of_commands}
 #    """)
-
-
