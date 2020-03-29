@@ -15,6 +15,7 @@
 # name_op varchar(50),
 # amount_op int);
 
+# sometimes during weekends YahooFinancials malfunctions - in this case it is advised to set "today" to last working day
 
 from tkinter import *
 from datetime import datetime
@@ -40,7 +41,9 @@ lbl.grid(row=0, column=0)
 # txt = Entry(window, width=10)
 # txt.grid(column=1, row(column=0, row=0)=0)
 
-today = date.today()
+#today = date.today()
+today = '2020-03-25'
+
 output = ''
 my_cursor = mydb.cursor(buffered=True)
 command = ""
@@ -113,12 +116,11 @@ def current_execute():
 name, type, amount, value_per_unit_{str.lower(currency_local.get())}, value_total_{str.lower(currency_local.get())}"""
     for x in my_result:
         asset_input = Assets(f'{x[0]}', f'{x[1]}', f'{x[2]}')
-        asset = (asset_input.name, asset_input.type, asset_input.amount, asset_input.value_per_unit_local_curr(), asset_input.value_total_local_curr())
+        asset = (asset_input.name, asset_input.type, asset_input.amount, round(asset_input.value_per_unit_local_curr(), 4), round(asset_input.value_total_local_curr(), 2))
         output += f"""{asset}
 """
     res = f'{legend} \n {output}'
     lbl.configure(text=res)
-
 
 
 def new_win_add():
@@ -146,9 +148,9 @@ def new_win_add():
     e_amount_add.grid(row=6, column=0, padx=10, pady=10)
 
     btn_confirm = Button(new_win, text="Confirm", command=new_win_add_check)
-    btn_cancel = Button(new_win, text="Cancel", command=new_win.destroy)
     btn_confirm.grid(row=8, column=0)
-    btn_cancel.grid(row=9, column=0)
+    btn_close = Button(new_win, text="Close", command=new_win.destroy)
+    btn_close.grid(row=9, column=0)
 
 
 def new_win_add_check():
@@ -174,25 +176,28 @@ def new_win_add_check():
     elif sec_type_get == 'Choose':
         display_check_name = Label(new_win, text=f"You must select type of the security")
         display_check_name.grid(row=1, column=0)
-    elif e_amount_get != 0:
+    else:
         try:
             if int(e_amount_get) > 10 ** 15:
                 display_check_amount = Label(new_win, text='Max 15 digits numbers are allowed in the "amount" field')
                 display_check_amount.grid(row=1, column=0)
+            elif int(e_amount_get) <= 0:
+                display_check_amount = Label(new_win, text="Amount must be greater than zero")
+                display_check_amount.grid(row=1, column=0)
+            else:
+                display_check_amount = Label(new_win, text=f'New security {e_name_get} has been added')
+                display_check_amount.grid(row=1, column=0)
+                asset_new_input = Assets(f'{e_name_get}', f'{sec_type_get}', f'{e_amount_get}')
+                asset_new = (asset_new_input.name, asset_new_input.type, asset_new_input.amount)
+                sql_formula = "INSERT INTO current_assets (name, type, amount) VALUES (%s, %s, %s)"
+                my_cursor.execute(sql_formula, asset_new)
+                operation_new = (f'{today}', f'{e_name_get}', f'{e_amount_get}')
+                sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+                my_cursor.execute(sql_formula, operation_new)
+                mydb.commit()
         except ValueError:
             display_check_amount = Label(new_win, text='Only numbers are allowed in the "amount" field')
             display_check_amount.grid(row=1, column=0)
-        else:
-            display_check_amount = Label(new_win, text=f'New security {e_name_get} has been added')
-            display_check_amount.grid(row=1, column=0)
-            asset_new_input = Assets(f'{e_name_get}', f'{sec_type_get}', f'{e_amount_get}')
-            asset_new = (asset_new_input.name, asset_new_input.type, asset_new_input.amount)
-            sql_formula = "INSERT INTO current_assets (name, type, amount) VALUES (%s, %s, %s)"
-            my_cursor.execute(sql_formula, asset_new)
-            operation_new = (f'{today}', f'{e_name_get}', f'{e_amount_get}')
-            sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
-            my_cursor.execute(sql_formula, operation_new)
-            mydb.commit()
 
 
 def new_win_remove():
@@ -206,9 +211,9 @@ def new_win_remove():
     e_name_remove.grid(row=1, column=0, padx=10, pady=10)
 
     btn_confirm = Button(new_win, text="Confirm", command=new_win_remove_check)
-    btn_cancel = Button(new_win, text="Cancel", command=new_win.destroy)
+    btn_close = Button(new_win, text="Close", command=new_win.destroy)
     btn_confirm.grid(row=8, column=0)
-    btn_cancel.grid(row=9, column=0)
+    btn_close.grid(row=9, column=0)
 
 
 def new_win_remove_check():
@@ -221,11 +226,9 @@ def new_win_remove_check():
     msg = my_cursor.fetchone()
 
     if not msg:
-        display_check_name = Label(new_win, text=f"Security {str.upper(e_name_remove_get)} is not included in your portfolio.")
+        display_check_name = Label(new_win, text=f"Security {str.upper(e_name_remove_get)} is not a part of your portfolio.")
         display_check_name.grid(row=1, column=0)
     else:
-        display_check_amount = Label(new_win, text=f'Security {e_name_remove_get} has been removed from your portfolio')
-        display_check_amount.grid(row=1, column=0)
         my_cursor.execute(f'SELECT amount FROM my_portfolio.current_assets WHERE name = "{e_name_remove_get}"')
         my_result = my_cursor.fetchall()
         amount_to_be_deleted = my_result[0][0]
@@ -237,29 +240,165 @@ def new_win_remove_check():
         sql_formula = f'DELETE FROM current_assets WHERE name = "{e_name_remove_get}"'
         my_cursor.execute(sql_formula)
         mydb.commit()
+        display_check_amount = Label(new_win, text=f'Security {e_name_remove_get} has been removed from your portfolio')
+        display_check_amount.grid(row=1, column=0)
 
+
+def new_win_edit():
+    new_win = Toplevel(root)
+    new_win.geometry('500x400')
+
+    global e_name_edit
+    display_name = Label(new_win, text="Type a code of existing security that you would like to ammend. For example: USD/BTC/AAPL")
+    display_name.grid(row=0, column=0)
+    e_name_edit = Entry(new_win, width=15, borderwidth=5)
+    e_name_edit.grid(row=1, column=0, padx=10, pady=10)
+
+    global add_or_subtract_edit
+    display_type = Label(new_win, text="Would you like to add or subtract?")
+    display_type.grid(row=3, column=0)
+    add_or_subtract_edit = StringVar(new_win)
+    add_or_subtract_edit.set("Choose")
+    w = OptionMenu(new_win, add_or_subtract_edit, "add", "subtract")
+    w.grid(row=4, column=0)
+
+    global e_amount_edit
+    display_amount = Label(new_win, text="Type the amount that you would like to add or subtract.")
+    display_amount.grid(row=5, column=0)
+    e_amount_edit = Entry(new_win, width=15, borderwidth=5)
+    e_amount_edit.grid(row=6, column=0, padx=10, pady=10)
+
+    btn_confirm = Button(new_win, text="Confirm", command=new_win_edit_check)
+    btn_cancel = Button(new_win, text="Cancel", command=new_win.destroy)
+    btn_confirm.grid(row=8, column=0)
+    btn_cancel.grid(row=9, column=0)
+
+
+def new_win_edit_check():
+    e_name_edit_get = e_name_edit.get()
+    add_or_subtract_edit_get = add_or_subtract_edit.get()
+    e_amount_edit_get = e_amount_edit.get()
+
+    new_win = Toplevel(root)
+    btn_ok = Button(new_win, text="Ok", command=new_win.destroy)
+    btn_ok.grid(row=8, column=0)
+    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{e_name_edit_get}'")
+    msg = my_cursor.fetchone()
+
+    if add_or_subtract_edit_get == 'subtract':
+        e_amount_edit_get = abs(int(e_amount_edit_get)) * (-1)
+    else:
+        e_amount_edit_get = abs(int(e_amount_edit_get))
+
+    if not e_name_edit_get.isalpha():
+        display_check_name = Label(new_win, text="Wrong security code. Only letters a-z allowed.")
+        display_check_name.grid(row=1, column=0)
+    elif len(e_name_edit_get) > 4 or len(e_name_edit_get) < 3:
+        display_check_name = Label(new_win, text="Wrong security code. You should enter 3 or 4 characters.")
+        display_check_name.grid(row=1, column=0)
+    elif not msg:
+        display_check_name = Label(new_win,text=f"Security {str.upper(e_name_edit_get)} is not a part of your portfolio..")
+        display_check_name.grid(row=1, column=0)
+    elif add_or_subtract_edit_get == 'Choose':
+        display_check_name = Label(new_win, text=f"Choose if you would like to add or subtract")
+        display_check_name.grid(row=1, column=0)
+    else:
+        try:
+            if abs(int(e_amount_edit_get)) > 10 ** 15:
+                display_check_amount = Label(new_win, text='Max 15 digits numbers are allowed in the "amount" field')
+                display_check_amount.grid(row=1, column=0)
+            elif int(e_amount_edit_get) == 0:
+                display_check_amount = Label(new_win, text="Amount can't zero")
+                display_check_amount.grid(row=1, column=0)
+            else:
+                sql_formula = f"UPDATE current_assets SET amount = (amount + {e_amount_edit_get}) WHERE name = '{e_name_edit_get}'"
+                my_cursor.execute(sql_formula)
+
+                operation_new = (f'{today}', f'{e_name_edit_get}', f'{e_amount_edit_get}')
+                sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+                my_cursor.execute(sql_formula, operation_new)
+                mydb.commit()
+                display_check_amount = Label(new_win, text=f'Security {e_name_edit_get} has been amended')
+                display_check_amount.grid(row=1, column=0)
+        except ValueError:
+            display_check_amount = Label(new_win, text='Only numbers are allowed in the "amount" field')
+            display_check_amount.grid(row=1, column=0)
+
+
+def new_win_history():
+    new_win = Toplevel(root)
+    new_win.geometry('500x400')
+    display_history_info = Label(new_win, text="Here you can check status of your portfolio on particular day in the past.\n Enter a historical date in format YYYY/MM/DD.")
+    display_history_info.grid(row=0, column=0)
+    btn_confirm = Button(new_win, text="Confirm", command=new_win_history_check)
+    btn_close = Button(new_win, text="Close", command=new_win.destroy)
+    btn_confirm.grid(row=8, column=0)
+    btn_close.grid(row=9, column=0)
+
+    global e_history_date
+    e_history_date = Entry(new_win, width=15, borderwidth=5)
+    e_history_date.grid(row=1, column=0, padx=10, pady=10)
+
+
+def new_win_history_check():
+    e_history_date_get = e_history_date.get()
+    new_win = Toplevel(root)
+    btn_ok = Button(new_win, text="Ok", command=new_win.destroy)
+    btn_ok.grid(row=8, column=0)
+
+    output = ''
+    try:
+        datetime.strptime(e_history_date_get, '%Y/%m/%d')
+        my_cursor.execute(f"SELECT name_op AS name, SUM(amount_op) AS amount_on_historical_date FROM my_portfolio.operations_history WHERE date_op <= '{e_history_date_get}' GROUP BY name")
+        my_result = my_cursor.fetchall()
+
+        for x in my_result:
+            output += f"""{x[0]} {x[1]}
+"""
+
+        legend = f"On {e_history_date_get} your portfolio consisted of:"
+        res = f'{legend} \n {output}'
+        display_check_amount = Label(new_win, text=res)
+        display_check_amount.grid(row=1, column=0)
+
+    except ValueError:
+        display_check_amount = Label(new_win, text='The date {} is invalid'.format(e_history_date_get))
+        display_check_amount.grid(row=1, column=0)
+
+
+def new_win_export():
+    pass
+def new_win_export():
+    pass
+def new_win_reset():
+    pass
+def new_win_exit():
+    pass
 
 currency_local = StringVar(root)
 currency_local.set("USD")
 var = OptionMenu(root, currency_local, "USD", "EUR", "GBP", "JPY", "PLN")
 var.grid(row=1, column=0)
 
+btn_current = Button(root, text="Current Assets", width=20, command=current_execute)
+btn_add = Button(root, text="Add New Asset", width=20, command=new_win_add)
+btn_remove = Button(root, text="Remove Asset", width=20, command=new_win_remove)
+btn_edit = Button(root, text="Edit Your Portfolio", width=20, command=new_win_edit)
+btn_history = Button(root, text="View History", width=20, command=new_win_history)
+btn_export = Button(root, text="Export Data", width=20, command=new_win_export)
+btn_reset = Button(root, text="Reset Changes", width=20, command=new_win_reset)
+btn_exit = Button(root, text="Exit", width=20, command=new_win_exit)
 
-btn1 = Button(root, text="Current Assets", command=current_execute)
-btn2 = Button(root, text="Add Asset", command=new_win_add)
-btn3 = Button(root, text="Remove Asset", command=new_win_remove)
-
-
-btn1.grid(column=0, row=3)
-btn2.grid(column=0, row=4)
-btn3.grid(column=0, row=5)
+btn_current.grid(column=0, row=3)
+btn_add.grid(column=0, row=4)
+btn_remove.grid(column=0, row=5)
+btn_edit.grid(column=0, row=6)
+btn_history.grid(column=0, row=7)
+btn_export.grid(column=0, row=8)
+btn_reset.grid(column=0, row=9)
+btn_exit.grid(column=0, row=10)
 
 root.mainloop()
-
-# 26.03 notka do samego siebie,  trzeba ostro przemodelowac kod, wywalic z bazy danych 2 kolumny z prawej i zamiast tego zrobic tak, zeby liczyc je
-# juz w samym programie, czyli poprostu w 2ga strone przeprowadzic operacje. w ten sposob pozbedziemy sie takze tych "roboczych" asset 1-3 ale to juz  jutro bo dzisiaj padam z nog
-
-
 
 
 
