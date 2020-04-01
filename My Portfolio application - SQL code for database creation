@@ -1,0 +1,54 @@
+"""
+2 below tables should be executed in MySQL:
+USE my_portfolio;
+
+DROP TABLE IF EXISTS current_assets;
+
+DROP TABLE IF EXISTS operations_history;
+
+CREATE TABLE current_assets (
+name varchar(50),
+type varchar(50),
+amount int,
+value_per_unit_local_curr float,
+value_total_local_curr float
+last_modified_date date);
+
+CREATE TABLE operations_history (
+date_op date,
+name_op varchar(50),
+amount_op int);
+
+below there is a sample data to pre-populate database for testing purposes:
+
+INSERT INTO current_assets (name, type, amount)
+VALUES  ('usd', 'currency', 1000),
+        ('gbp', 'currency', 1000),
+        ('pln', 'currency', 1000),
+        ('jpy', 'currency', 20000),
+        ('czk', 'currency', 15000),
+        ('btc', 'cryptocurrency', 20),
+        ('eth', 'cryptocurrency', 150);
+
+INSERT INTO operations_history (date_op, name_op, amount_op)
+VALUES  ('2020-03-01', 'usd', 1500),
+        ('2020-03-02', 'usd', -500),
+        ('2020-03-05', 'gbp', 3000),
+        ('2020-03-07', 'pln', 500),
+        ('2020-03-11', 'jpy', 12000),
+        ('2020-03-14', 'gbp', -2000),
+        ('2020-03-15', 'pln', 500),
+        ('2020-03-17', 'czk', 10000),
+        ('2020-03-18', 'jpy', 18000),
+        ('2020-03-20', 'gbp', 1000),
+        ('2020-03-23', 'usd', 1200),
+        ('2020-03-24', 'jpy', -10000),
+        ('2020-03-26', 'czk', 5000),
+        ('2020-03-26', 'eth', 300),
+        ('2020-03-27', 'btc', 100),
+        ('2020-03-27', 'eth', -100),
+        ('2020-03-30', 'btc', -60),
+        ('2020-03-30', 'usd', -1200),
+        ('2020-03-31', 'eth', -50),
+        ('2020-03-31', 'btc', -20);
+"""
