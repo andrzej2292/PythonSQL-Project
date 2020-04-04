@@ -16,12 +16,11 @@ today = date.today()
 # today = '2020-03-25'
 my_cursor = mydb.cursor(buffered=True)
 
-username = 'aaa'
-password = '111'
 
 class Assets:
 
-    def __init__(self, name, type, amount):
+    def __init__(self, username, name, type, amount):
+        self.username = username
         self.name = name
         self.type = type
         self.amount = int(amount)
@@ -59,9 +58,14 @@ def login():
     global root_login
     root_login = Tk()
     root_login.title("Welcome to Your Portfolio")
-    Button(root_login, text="Login", width=20, command=login_exe).grid(column=0, row=5)
-    Button(root_login, text="Reset Password", width=20, command=login_exe).grid(column=0, row=6)
-    Button(root_login, text="New User", width=20, command=login_exe).grid(column=0, row=7)
+
+    global error_display
+    error_display = Label(root_login, text="")
+    error_display.grid(row=4, column=0)
+
+    Button(root_login, text="Login", width=20, command=login_exe).grid(column=0, row=6)
+    Button(root_login, text="Reset Password", width=20, command=login_exe).grid(column=0, row=7)
+    Button(root_login, text="New User", width=20, command=login_exe).grid(column=0, row=8)
 
     global username_input
     Label(root_login, text="Enter your username").grid(row=0, column=0)
@@ -83,20 +87,37 @@ def username_remind():
 
 
 def login_exe():
-    if username_input.get() == username and password_input.get() == password:
+    username_input_get = username_input.get()
+    password_input_get = password_input.get()
+    global username
+    username = ''
+    password = ''
+
+    my_cursor.execute(f"SELECT * FROM my_portfolio.user_data WHERE username = '{username_input_get}'")
+    my_result = my_cursor.fetchall()
+
+    for x in my_result:
+        username = x[0]
+        password = x[1]
+        email = x[2]
+
+    if not username:
+        error_display.configure(text="Wrong username or password")
+    elif username_input_get == username and password_input_get == password:
         main_menu()
         root_login.destroy()
     else:
-        Label(root_login, text="Wrong password").grid(row=4, column=0)
+        error_display.configure(text="Wrong username or password")
 
 
 def main_menu():
     global root
     root = Tk()
-    root.title("Welcome to Your Portfolio")
+    root.title(f"Welcome to Your Portfolio {username}")
     # root.geometry('500x500')
     global lbl
-    lbl = Label(root, text="Choose your local currency:").grid(row=0, column=0, sticky="e")
+    lbl = Label(root, text="Choose your local currency:")
+    lbl.grid(row=0, column=0)
     # e = Entry(root, width=15, borderwidth=5)
     # e.grid(row=1, column=0, padx=10, pady=10)
     # e.insert(0, "Choose your local currency")
@@ -119,12 +140,12 @@ def main_menu():
 
 def current_execute():
     output = ''
-    my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE username_ca = '{username}'")
     my_result = my_cursor.fetchall()
     legend = f"Below you can see your current assets:\n\nname, amount, exch_rate_{str.lower(currency_local.get())}, value_total_{str.lower(currency_local.get())}, type"
 
     for x in my_result:
-        asset_input = Assets(f'{x[0]}', f'{x[1]}', f'{x[2]}')
+        asset_input = Assets(f'{x[0]}', f'{x[1]}', f'{x[2]}', f'{x[3]}')
         asset = (asset_input.name, asset_input.type, asset_input.amount, round(asset_input.value_per_unit_local_curr(), 4), round(asset_input.value_total_local_curr(), 2))
         output += f"{asset[0]}  {asset[2]}  {asset[3]}  {asset[4]}  {asset[1]}\n"
 
@@ -146,7 +167,8 @@ def new_win_add():
     global sec_type_add
     display_type = Label(new_win, text="Choose a  type of new security that you would like to add.")
     display_type.grid(row=3, column=0)
-    sec_type_add = StringVar(new_win).set("Choose")
+    sec_type_add = StringVar(new_win)
+    sec_type_add.set("Choose")
     OptionMenu(new_win, sec_type_add, "shares", "bonds", "currency", "cryptocurrency").grid(row=4, column=0)
 
     global e_amount_add
@@ -154,13 +176,14 @@ def new_win_add():
     e_amount_add = Entry(new_win, width=15, borderwidth=5)
     e_amount_add.grid(row=6, column=0, padx=10, pady=10)
 
+
 def new_win_add_check():
     e_name_get = str(e_name_add.get())
     e_amount_get = e_amount_add.get()
     new_win = Toplevel(root)
     # new_win.geometry('500x400')
     Button(new_win, text="Ok", command=new_win.destroy).grid(row=8, column=0)
-    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{e_name_get}'")
+    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE username_ca = '{username}' AND name = '{e_name_get}'")
     msg = my_cursor.fetchone()
     sec_type_get = sec_type_add.get()
 
@@ -180,12 +203,12 @@ def new_win_add_check():
                 Label(new_win, text="Amount must be greater than zero").grid(row=1, column=0)
             else:
                 Label(new_win, text=f'New security {str.upper(e_name_get)} has been added').grid(row=1, column=0)
-                asset_new_input = Assets(f'{e_name_get}', f'{sec_type_get}', f'{e_amount_get}')
-                asset_new = (asset_new_input.name, asset_new_input.type, asset_new_input.amount)
-                sql_formula = "INSERT INTO current_assets (name, type, amount) VALUES (%s, %s, %s)"
+                asset_new_input = Assets(f'{username}', f'{e_name_get}', f'{sec_type_get}', f'{e_amount_get}')
+                asset_new = (asset_new_input.username, asset_new_input.name, asset_new_input.type, asset_new_input.amount)
+                sql_formula = "INSERT INTO current_assets (username_ca, name, type, amount) VALUES (%s, %s, %s, %s)"
                 my_cursor.execute(sql_formula, asset_new)
-                operation_new = (f'{today}', f'{e_name_get}', f'{e_amount_get}')
-                sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+                operation_new = (f'{username}', f'{today}', f'{e_name_get}', f'{e_amount_get}')
+                sql_formula = "INSERT INTO operations_history (username_op, date_op, name_op, amount_op) VALUES (%s, %s, %s, %s)"
                 my_cursor.execute(sql_formula, operation_new)
                 mydb.commit()
         except ValueError:
@@ -214,22 +237,22 @@ def new_win_remove_check():
     # new_win.geometry('500x400')
     btn_ok = Button(new_win, text="Ok", command=new_win.destroy)
     btn_ok.grid(row=8, column=0)
-    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{e_name_remove_get}'")
+    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE username_ca = '{username}' AND name = '{e_name_remove_get}'")
     msg = my_cursor.fetchone()
 
     if not msg:
         display_check_name = Label(new_win, text=f"Security {str.upper(e_name_remove_get)} is not a part of your portfolio.")
         display_check_name.grid(row=1, column=0)
     else:
-        my_cursor.execute(f'SELECT amount FROM my_portfolio.current_assets WHERE name = "{e_name_remove_get}"')
+        my_cursor.execute(f"SELECT amount FROM my_portfolio.current_assets WHERE username_ca = '{username}' AND name = '{e_name_remove_get}'")
         my_result = my_cursor.fetchall()
         amount_to_be_deleted = my_result[0][0]
-        operation_new = (f'{today}', f'{e_name_remove_get}', f'-{amount_to_be_deleted}')
+        operation_new = (f'{username}', f'{today}', f'{e_name_remove_get}', f'-{amount_to_be_deleted}')
 
-        sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+        sql_formula = "INSERT INTO operations_history (username_op, date_op, name_op, amount_op) VALUES (%s, %s, %s, %s)"
         my_cursor.execute(sql_formula, operation_new)
 
-        sql_formula = f'DELETE FROM current_assets WHERE name = "{e_name_remove_get}"'
+        sql_formula = f"DELETE FROM current_assets WHERE username_ca = '{username}' AND name = '{e_name_remove_get}'"
         my_cursor.execute(sql_formula)
         mydb.commit()
         Label(new_win, text=f'Security {e_name_remove_get} has been removed from your portfolio').grid(row=1, column=0)
@@ -257,13 +280,14 @@ def new_win_edit():
     e_amount_edit = Entry(new_win, width=15, borderwidth=5)
     e_amount_edit.grid(row=6, column=0, padx=10, pady=10)
 
+
 def new_win_edit_check():
     e_name_edit_get = e_name_edit.get()
     add_or_subtract_edit_get = add_or_subtract_edit.get()
     e_amount_edit_get = e_amount_edit.get()
     new_win = Toplevel(root)
     Button(new_win, text="Ok", command=new_win.destroy).grid(row=8, column=0)
-    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE name = '{e_name_edit_get}'")
+    my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE username_ca = '{username}' AND name = '{e_name_edit_get}'")
     msg = my_cursor.fetchone()
 
     if add_or_subtract_edit_get == 'subtract':
@@ -285,10 +309,10 @@ def new_win_edit_check():
             elif int(e_amount_edit_get) == 0:
                 Label(new_win, text="Amount can't zero").grid(row=1, column=0)
             else:
-                sql_formula = f"UPDATE current_assets SET amount = (amount + {e_amount_edit_get}) WHERE name = '{e_name_edit_get}'"
+                sql_formula = f"UPDATE current_assets SET amount = (amount + {e_amount_edit_get}) WHERE username_ca = '{username}' AND name = '{e_name_edit_get}'"
                 my_cursor.execute(sql_formula)
-                operation_new = (f'{today}', f'{e_name_edit_get}', f'{e_amount_edit_get}')
-                sql_formula = "INSERT INTO operations_history (date_op, name_op, amount_op) VALUES (%s, %s, %s)"
+                operation_new = (f'{username}', f'{today}', f'{e_name_edit_get}', f'{e_amount_edit_get}')
+                sql_formula = "INSERT INTO operations_history (username_op, date_op, name_op, amount_op) VALUES (%s, %s, %s, %s)"
                 my_cursor.execute(sql_formula, operation_new)
                 mydb.commit()
                 Label(new_win, text=f'Security {e_name_edit_get} has been amended').grid(row=1, column=0)
@@ -307,6 +331,7 @@ def new_win_history():
     e_history_date = Entry(new_win, width=15, borderwidth=5)
     e_history_date.grid(row=1, column=0, padx=10, pady=10)
 
+
 def new_win_history_check():
     e_history_date_get = e_history_date.get()
     new_win = Toplevel(root)
@@ -314,7 +339,7 @@ def new_win_history_check():
     output = ''
     try:
         datetime.strptime(e_history_date_get, '%Y/%m/%d')
-        my_cursor.execute(f"SELECT name_op AS name, SUM(amount_op) AS amount_on_historical_date FROM my_portfolio.operations_history WHERE date_op <= '{e_history_date_get}' GROUP BY name")
+        my_cursor.execute(f"SELECT name_op AS name, SUM(amount_op) AS amount_on_historical_date FROM my_portfolio.operations_history WHERE username_op = '{username}' AND date_op <= '{e_history_date_get}' GROUP BY name")
         my_result = my_cursor.fetchall()
 
         for x in my_result:
@@ -345,9 +370,9 @@ def new_win_export_exe():
     Button(new_win, text="Ok", command=new_win.destroy).grid(row=8, column=0)
 
     if file_type_get == "csv":
-        my_cursor.execute("SELECT * FROM my_portfolio.current_assets")
+        my_cursor.execute(f"SELECT * FROM my_portfolio.current_assets WHERE username_ca = '{username}'")
         my_result = my_cursor.fetchall()
-        f = open('portfolio_export.csv', "a+")
+        f = open(f'portfolio_export_{today}.csv', "a+")
         for row in my_result:
             for column in row:
                 f.write('%s;' % column)
@@ -364,27 +389,28 @@ def new_win_export_exe():
 
 def new_win_reset():
     new_win = Toplevel(root)
-    new_win.geometry('500x400')
+    # new_win.geometry('500x400')
     Label(new_win, text="Are you sure that you want to revert changes made today?\nYour portfolio will be reset to the state from yesterday.\n").grid(row=0, column=0)
     Button(new_win, text="Confirm", command=new_win_reset_exe).grid(row=2, column=0)
     Button(new_win, text="Cancel", command=new_win.destroy).grid(row=3, column=0)
 
 
 def new_win_reset_exe():
+    # nie jestem w stanie przywrocic elementu ktory na stale usunallem funkca remove asset, musze to naprawic
     new_win = Toplevel(root)
     # new_win.geometry('500x400')
     Button(new_win, text="Ok", command=new_win.destroy).grid(row=8, column=0)
 
-    my_cursor.execute("SELECT * FROM my_portfolio.operations_history WHERE date_op = CURDATE();")
+    my_cursor.execute(f"SELECT * FROM my_portfolio.operations_history WHERE username_op = '{username}' AND date_op = CURDATE();")
     my_result = my_cursor.fetchall()
 
     for x in my_result:
-        operation_reset_name = x[1]
-        operation_reset_amount = x[2]
+        operation_reset_name = x[2]
+        operation_reset_amount = x[3]
 
-        sql_formula = f"UPDATE current_assets SET amount = (amount - {operation_reset_amount}) WHERE name = '{operation_reset_name}'"
+        sql_formula = f"UPDATE current_assets SET amount = (amount - {operation_reset_amount}) WHERE username_ca = '{username}' AND name = '{operation_reset_name}'"
         my_cursor.execute(sql_formula)
-    my_cursor.execute("DELETE FROM my_portfolio.operations_history WHERE date_op = CURDATE();")
+    my_cursor.execute(f"DELETE FROM my_portfolio.operations_history WHERE username_op = '{username}' AND date_op = CURDATE();")
     mydb.commit()
 
     Label(new_win, text="Your portfolio has been reset to the state from yesterday.\n").grid(row=0, column=0)
