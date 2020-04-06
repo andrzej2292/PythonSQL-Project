@@ -2,11 +2,14 @@
 # upgrade pip
 # sometimes during weekends YahooFinancials malfunctions - in this case it is advised to set "today" to last working day
 
+from random import randrange
 from tkinter import *
 from datetime import datetime
 from datetime import date
 from yahoofinancials import YahooFinancials
 import mysql.connector
+import string
+import random
 
 mydb = mysql.connector.connect(user='root', password='MyNewPass',
                                host='127.0.0.1',
@@ -54,6 +57,10 @@ class Assets:
         return float(self.amount * self.value_per_unit_local_curr())
 
 
+def password_generator(size=8, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+
 def login():
     global root_login
     root_login = Tk()
@@ -64,7 +71,7 @@ def login():
     error_display.grid(row=4, column=0)
 
     Button(root_login, text="Login", width=20, command=login_exe).grid(column=0, row=6)
-    Button(root_login, text="Reset Password", width=20, command=login_exe).grid(column=0, row=7)
+    Button(root_login, text="Reset Password", width=20, command=password_reset).grid(column=0, row=7)
     Button(root_login, text="New User", width=20, command=login_exe).grid(column=0, row=8)
 
     global username_input
@@ -79,11 +86,42 @@ def login():
 
 
 def password_reset():
-    pass
+    global new_win
+    new_win = Toplevel(root_login)
+    Label(new_win, text="Enter your email address").grid(row=0, column=0)
+    Button(new_win, text='Reset password', command=password_reset_exe).grid(column=0, row=2)
+    Button(new_win, text='Back', command=new_win.destroy).grid(column=0, row=3)
+
+    global password_reset_email
+    password_reset_email = Entry(new_win, width=15, borderwidth=5)
+    password_reset_email.grid(row=1, column=0, padx=10, pady=10)
 
 
-def username_remind():
-    pass
+def password_reset_exe():
+    password_reset_email_get = password_reset_email.get()
+    my_cursor.execute(f"SELECT * FROM my_portfolio.user_data WHERE email = '{password_reset_email_get}'")
+    my_result = my_cursor.fetchall()
+    username = ''
+    email = ''
+
+    for x in my_result:
+        username = x[0]
+        email = x[2]
+
+    if not email:
+        error_display.configure(text="Email with new password has been sent")
+    elif password_reset_email_get == email:
+        new_win_2 = Toplevel(root_login)
+        password = password_generator()
+        sql_formula = f"UPDATE my_portfolio.user_data SET password = '{password}' WHERE username = '{username}'"
+        my_cursor.execute(sql_formula)
+        mydb.commit()
+        Label(new_win_2, text=f'<This is a simulation of an email>\n\n\nHi {username}\n\nYour new password is "{password}"\n\nBest regards\nMy Portfolio Support').grid(row=0, column=0)
+        Button(new_win_2, text='Close', command=new_win_2.destroy).grid(row=1, column=0)
+        error_display.configure(text="Email with new password has been sent")
+        new_win.destroy()
+    else:
+        error_display.configure(text="Email with new password has been sent")
 
 
 def login_exe():
