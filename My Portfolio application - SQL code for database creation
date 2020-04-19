@@ -1,54 +1,103 @@
-"""
-2 below tables should be executed in MySQL:
-USE my_portfolio;
+CREATE DATABASE  IF NOT EXISTS `my_portfolio` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `my_portfolio`;
+-- MySQL dump 10.13  Distrib 8.0.18, for Win64 (x86_64)
+--
+-- Host: 127.0.0.1    Database: my_portfolio
+-- ------------------------------------------------------
+-- Server version	8.0.18
 
-DROP TABLE IF EXISTS current_assets;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-DROP TABLE IF EXISTS operations_history;
+--
+-- Table structure for table `current_assets`
+--
 
-CREATE TABLE current_assets (
-name varchar(50),
-type varchar(50),
-amount int,
-value_per_unit_local_curr float,
-value_total_local_curr float
-last_modified_date date);
+DROP TABLE IF EXISTS `current_assets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `current_assets` (
+  `username_ca` varchar(50) DEFAULT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `type` varchar(50) DEFAULT NULL,
+  `amount` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-CREATE TABLE operations_history (
-date_op date,
-name_op varchar(50),
-amount_op int);
+--
+-- Dumping data for table `current_assets`
+--
 
-below there is a sample data to pre-populate database for testing purposes:
+LOCK TABLES `current_assets` WRITE;
+/*!40000 ALTER TABLE `current_assets` DISABLE KEYS */;
+INSERT INTO `current_assets` VALUES ('Andrzej','usd','currency',2000),('Andrzej','gbp','currency',2000),('Andrzej','pln','currency',2000),('Andrzej','jpy','currency',40000),('Andrzej','czk','currency',30000),('Andrzej','btc','cryptocurrency',40),('Andrzej','eth','cryptocurrency',300),('John','usd','currency',101000),('John','gbp','currency',1000),('John','pln','currency',1000),('John','jpy','currency',20000),('John','czk','currency',15000),('John','eth','cryptocurrency',150);
+/*!40000 ALTER TABLE `current_assets` ENABLE KEYS */;
+UNLOCK TABLES;
 
-INSERT INTO current_assets (name, type, amount)
-VALUES  ('usd', 'currency', 1000),
-        ('gbp', 'currency', 1000),
-        ('pln', 'currency', 1000),
-        ('jpy', 'currency', 20000),
-        ('czk', 'currency', 15000),
-        ('btc', 'cryptocurrency', 20),
-        ('eth', 'cryptocurrency', 150);
+--
+-- Table structure for table `operations_history`
+--
 
-INSERT INTO operations_history (date_op, name_op, amount_op)
-VALUES  ('2020-03-01', 'usd', 1500),
-        ('2020-03-02', 'usd', -500),
-        ('2020-03-05', 'gbp', 3000),
-        ('2020-03-07', 'pln', 500),
-        ('2020-03-11', 'jpy', 12000),
-        ('2020-03-14', 'gbp', -2000),
-        ('2020-03-15', 'pln', 500),
-        ('2020-03-17', 'czk', 10000),
-        ('2020-03-18', 'jpy', 18000),
-        ('2020-03-20', 'gbp', 1000),
-        ('2020-03-23', 'usd', 1200),
-        ('2020-03-24', 'jpy', -10000),
-        ('2020-03-26', 'czk', 5000),
-        ('2020-03-26', 'eth', 300),
-        ('2020-03-27', 'btc', 100),
-        ('2020-03-27', 'eth', -100),
-        ('2020-03-30', 'btc', -60),
-        ('2020-03-30', 'usd', -1200),
-        ('2020-03-31', 'eth', -50),
-        ('2020-03-31', 'btc', -20);
-"""
+DROP TABLE IF EXISTS `operations_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operations_history` (
+  `username_op` varchar(50) DEFAULT NULL,
+  `date_op` date DEFAULT NULL,
+  `name_op` varchar(50) DEFAULT NULL,
+  `amount_op` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `operations_history`
+--
+
+LOCK TABLES `operations_history` WRITE;
+/*!40000 ALTER TABLE `operations_history` DISABLE KEYS */;
+INSERT INTO `operations_history` VALUES ('Andrzej','2020-03-01','usd',300),('Andrzej','2020-03-02','usd',-100),('Andrzej','2020-03-05','gbp',6000),('Andrzej','2020-03-07','pln',1000),('Andrzej','2020-03-11','jpy',24000),('Andrzej','2020-03-14','gbp',-4000),('Andrzej','2020-03-15','pln',1000),('Andrzej','2020-03-17','czk',20000),('Andrzej','2020-03-18','jpy',28000),('Andrzej','2020-03-20','gbp',2000),('Andrzej','2020-03-23','usd',2400),('Andrzej','2020-03-24','jpy',-20000),('Andrzej','2020-03-26','czk',10000),('Andrzej','2020-03-26','eth',600),('Andrzej','2020-03-27','btc',200),('Andrzej','2020-03-27','eth',-200),('Andrzej','2020-03-30','btc',-120),('Andrzej','2020-03-30','usd',-2400),('Andrzej','2020-03-31','eth',-100),('Andrzej','2020-03-31','btc',-40),('John','2020-03-01','usd',1500),('John','2020-03-02','usd',-500),('John','2020-03-05','gbp',3000),('John','2020-03-07','pln',500),('John','2020-03-11','jpy',12000),('John','2020-03-14','gbp',-2000),('John','2020-03-15','pln',500),('John','2020-03-17','czk',10000),('John','2020-03-18','jpy',18000),('John','2020-03-20','gbp',1000),('John','2020-03-23','usd',1200),('John','2020-03-24','jpy',-10000),('John','2020-03-26','czk',5000),('John','2020-03-26','eth',300),('John','2020-03-27','btc',100),('John','2020-03-27','eth',-100),('John','2020-03-30','btc',-60),('John','2020-03-30','usd',-1200),('John','2020-03-31','eth',-50),('John','2020-03-31','btc',-20),('John','2020-04-05','usd',100000);
+/*!40000 ALTER TABLE `operations_history` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_data`
+--
+
+DROP TABLE IF EXISTS `user_data`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_data` (
+  `username` varchar(50) DEFAULT NULL,
+  `password` varchar(50) DEFAULT NULL,
+  `email` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_data`
+--
+
+LOCK TABLES `user_data` WRITE;
+/*!40000 ALTER TABLE `user_data` DISABLE KEYS */;
+INSERT INTO `user_data` VALUES ('Andrzej','HPY3PLNP','andrzej22081@gmail.com'),('John','111','john.smith@gmail.com'),('a','1','a.1@gmail.com');
+/*!40000 ALTER TABLE `user_data` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2020-04-19 17:53:38
